@@ -263,7 +263,11 @@ class StunProtocol(asyncio.DatagramProtocol):
         Send a STUN message.
         """
         self.__log_debug("> %s %s", addr, message)
-        self.transport.sendto(bytes(message), addr)
+        try:
+            self.transport.sendto(bytes(message), addr)
+        except:
+            self.__log_debug("> Error sending %s to %s; ignoring", message, addr)
+            pass
 
     def __log_debug(self, msg: str, *args) -> None:
         logger.debug("%s %s " + msg, self.receiver, self, *args)
