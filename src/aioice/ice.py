@@ -10,7 +10,11 @@ import threading
 from itertools import count
 from typing import Dict, List, Optional, Set, Text, Tuple, Union, cast
 
+from termcolor import colored as c
+
 import ifaddr
+
+import time
 
 from . import mdns, stun, turn
 from .candidate import Candidate, candidate_foundation, candidate_priority
@@ -190,15 +194,24 @@ class StunProtocol(asyncio.DatagramProtocol):
         self.receiver = receiver
         self.transport: Optional[asyncio.DatagramTransport] = None
         self.transactions: Dict[bytes, stun.Transaction] = {}
+        self.last_log:float = None;
+
+    def pause_writing(self, ke):
+       print(f'PAUSE WRITING {ke}')
+
+    def resume_writing(self, ke):
+       print(f'RESUME WRITING {ke}')
 
     def connection_lost(self, exc: Exception) -> None:
         self.__log_debug("connection_lost(%s)", exc)
+        print(c(f'UDP connection lost {exc}', 'dark_grey'))
         if not self.__closed.done():
             self.receiver.data_received(None, None)
             self.__closed.set_result(True)
 
     def connection_made(self, transport) -> None:
         self.__log_debug("connection_made(%s)", transport)
+        print(c(f'UDP connection made! {transport}', 'green'))
         self.transport = transport
 
     def datagram_received(self, data: Union[bytes, Text], addr: Tuple) -> None:
@@ -223,6 +236,7 @@ class StunProtocol(asyncio.DatagramProtocol):
             self.receiver.request_received(message, addr, self, data)
 
     def error_received(self, exc: Exception) -> None:
+        print(f'connection error: {exc}')
         self.__log_debug("error_received(%s)", exc)
 
     # custom
@@ -252,11 +266,21 @@ class StunProtocol(asyncio.DatagramProtocol):
         self.transactions[request.transaction_id] = transaction
         try:
             return await transaction.run()
+        except asyncio.InvalidStateError:
+            print(c(f'InvalidStateError error in STUN request => TIMEOUT', 'RED'))
         finally:
             del self.transactions[request.transaction_id]
 
     async def send_data(self, data: bytes, addr: Tuple[str, int]) -> None:
+        # if self.last_log == None:
+        #     self.last_log = time.time()
+        # d = time.time()-self.last_log
+        # self.last_log = time.time()
+
         self.transport.sendto(data, addr)
+
+        # if (self.transport)
+        # print(f'Sent {len(data)}B into {str( self.transport)}, d={d}...')
 
     def send_stun(self, message: stun.Message, addr: Tuple[str, int]) -> None:
         """
@@ -264,7 +288,9 @@ class StunProtocol(asyncio.DatagramProtocol):
         """
         self.__log_debug("> %s %s", addr, message)
         try:
+            print(f'Sending stun msg to {self.transport} {addr}: {message.message_method}/{message.message_class}')
             self.transport.sendto(bytes(message), addr)
+
         except:
             self.__log_debug("> Error sending %s to %s; ignoring", message, addr)
             pass
@@ -605,7 +631,14 @@ class Connection:
 
         :param data: The data to be sent.
         """
-        await self.sendto(data, 1)
+        try:
+            await self.sendto(data, 1)
+        except (asyncio.CancelledError):
+            print('Ice send cancelled')
+            return
+        except ConnectionError as e:
+            print(f'Ice connection error: {e}')
+            raise e
 
     async def sendto(self, data: bytes, component: int) -> None:
         """
@@ -621,6 +654,7 @@ class Connection:
             await active_pair.protocol.send_data(data, active_pair.remote_addr)
         else:
             raise ConnectionError("Cannot send data, not connected")
+
 
     def set_selected_pair(
         self, component: int, local_foundation: str, remote_foundation: str
