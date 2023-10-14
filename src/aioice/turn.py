@@ -339,7 +339,7 @@ class TurnClientUdpProtocol(TurnClientMixin, asyncio.DatagramProtocol):
     """
 
     def _send(self, data: bytes) -> None:
-        print('sending here')
+        # print('sending turn here')
         self.transport.sendto(data)
 
     def __repr__(self) -> str:

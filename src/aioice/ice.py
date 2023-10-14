@@ -196,11 +196,11 @@ class StunProtocol(asyncio.DatagramProtocol):
         self.transactions: Dict[bytes, stun.Transaction] = {}
         self.last_log:float = None;
 
-    def pause_writing(self, ke):
-       print(f'PAUSE WRITING {ke}')
+    def pause_writing(self):
+       print(f'PAUSE WRITING')
 
-    def resume_writing(self, ke):
-       print(f'RESUME WRITING {ke}')
+    def resume_writing(self):
+       print(f'RESUME WRITING')
 
     def connection_lost(self, exc: Exception) -> None:
         self.__log_debug("connection_lost(%s)", exc)
