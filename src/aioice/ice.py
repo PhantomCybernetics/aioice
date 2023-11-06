@@ -288,7 +288,7 @@ class StunProtocol(asyncio.DatagramProtocol):
         """
         self.__log_debug("> %s %s", addr, message)
         try:
-            print(f'Sending stun msg to {self.transport} {addr}: {message.message_method}/{message.message_class}')
+            # print(f'Sending stun msg to {self.transport} {addr}: {message.message_method}/{message.message_class}')
             self.transport.sendto(bytes(message), addr)
 
         except:
@@ -637,8 +637,8 @@ class Connection:
             print('Ice send cancelled')
             return
         except ConnectionError as e:
-            print(f'Ice connection error: {e}')
-            raise e
+            print(c(f'Ice connection error: {e}', 'red'))
+            return
 
     async def sendto(self, data: bytes, component: int) -> None:
         """
@@ -1033,7 +1033,7 @@ class Connection:
                         request,
                         pair.remote_addr,
                         integrity_key=self.remote_password.encode("utf8"),
-                        retransmissions=0,
+                        retransmissions=3,
                     )
                     failures = 0
                 except stun.TransactionError:

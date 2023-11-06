@@ -302,10 +302,14 @@ class Transaction:
                 self.__timeout_handle.cancel()
 
     def __retry(self) -> None:
+        if self.__future.done():
+            return
         if self.__tries >= self.__tries_max:
-            self.__future.set_exception(TransactionTimeout())
+            print(f'Done retrying {self.__future}')
+            self.__future.set_exception(TransactionTimeout('Retry failed'))
             return
 
+        print(f'Retrying STUN {self.__tries}')
         self.__protocol.send_stun(self.__request, self.__addr)
 
         loop = asyncio.get_event_loop()
