@@ -101,6 +101,7 @@ class TurnClientMixin:
         self.server = server
         self.transactions: Dict[bytes, stun.Transaction] = {}
         self.username = username
+        self.writing_paused:bool = False
 
     async def channel_bind(self, channel_number: int, addr: Tuple[str, int]) -> None:
         request = stun.Message(
@@ -346,10 +347,12 @@ class TurnClientUdpProtocol(TurnClientMixin, asyncio.DatagramProtocol):
         return "turn/udp"
 
     def pause_writing(self):
-       print(f'PAUSE WRITING turn')
+        self.writing_paused = True
+        print(f'PAUSE WRITING turn')
 
     def resume_writing(self):
-       print(f'RESUME WRITING turn')
+        self.writing_paused = False
+        print(f'RESUME WRITING turn')
 
 class TurnTransport:
     """

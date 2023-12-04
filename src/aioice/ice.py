@@ -194,13 +194,16 @@ class StunProtocol(asyncio.DatagramProtocol):
         self.receiver = receiver
         self.transport: Optional[asyncio.DatagramTransport] = None
         self.transactions: Dict[bytes, stun.Transaction] = {}
-        self.last_log:float = None;
+        self.last_log:float = None
+        self.writing_paused:bool = False
 
     def pause_writing(self):
-       print(f'PAUSE WRITING stun')
+        self.writing_paused = True
+        print(f'PAUSE WRITING stun')
 
     def resume_writing(self):
-       print(f'RESUME WRITING stun')
+        self.writing_paused = True
+        print(f'RESUME WRITING stun')
 
     def connection_lost(self, exc: Exception) -> None:
         self.__log_debug("connection_lost(%s)", exc)
@@ -236,7 +239,7 @@ class StunProtocol(asyncio.DatagramProtocol):
             self.receiver.request_received(message, addr, self, data)
 
     def error_received(self, exc: Exception) -> None:
-        print(f'connection error: {exc}')
+        print(f'StunProtocol connection error: {exc}')
         self.__log_debug("error_received(%s)", exc)
 
     # custom

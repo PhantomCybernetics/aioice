@@ -9,6 +9,8 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from .utils import random_transaction_id
 
+from termcolor import colored as c
+
 COOKIE = 0x2112A442
 FINGERPRINT_LENGTH = 8
 FINGERPRINT_XOR = 0x5354554E
@@ -305,8 +307,12 @@ class Transaction:
         if self.__future.done():
             return
         if self.__tries >= self.__tries_max:
-            print(f'Done retrying {self.__future}')
+            print(c(f'Done retrying {self.__future}', 'red'))
             self.__future.set_exception(TransactionTimeout('Retry failed'))
+            return
+        if self.__protocol.writing_paused:
+            print(c(f'Dropped transaction {self.__future}', 'yellow'))
+            self.__future.cancel()
             return
 
         print(f'Retrying STUN {self.__tries}')
