@@ -302,8 +302,10 @@ class Transaction:
                 self.__timeout_handle.cancel()
 
     def __retry(self) -> None:
+        if self.__future.done():
+            return
         if self.__tries >= self.__tries_max:
-            self.__future.set_exception(TransactionTimeout())
+            self.__future.set_exception(TransactionTimeout('Retry failed'))
             return
 
         self.__protocol.send_stun(self.__request, self.__addr)
