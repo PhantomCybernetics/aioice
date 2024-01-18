@@ -17,6 +17,7 @@ from .candidate import Candidate, candidate_foundation, candidate_priority
 from .utils import random_string
 
 logger = logging.getLogger(__name__)
+from termcolor import colored as c
 
 ICE_COMPLETED = 1
 ICE_FAILED = 2
@@ -263,7 +264,12 @@ class StunProtocol(asyncio.DatagramProtocol):
         Send a STUN message.
         """
         self.__log_debug("> %s %s", addr, message)
-        self.transport.sendto(bytes(message), addr)
+        try:
+            # print(f'Sending stun msg to {self.transport} {addr}: {message.message_method}/{message.message_class}')
+            self.transport.sendto(bytes(message), addr)
+        except:
+            self.__log_debug("> Error sending %s to %s; ignoring", message, addr)
+            pass
 
     def __log_debug(self, msg: str, *args) -> None:
         logger.debug("%s %s " + msg, self.receiver, self, *args)
@@ -530,6 +536,7 @@ class Connection:
             try:
                 await self._query_consent_task
             except asyncio.CancelledError:
+                print(c('Query consent task cancelled', 'red'))
                 pass
 
         # stop check list
@@ -538,7 +545,7 @@ class Connection:
 
         # unreference mDNS
         await unref_mdns_protocol(self)
-
+        print(c('Clearing ice nominated', 'red'))
         self._nominated.clear()
         for protocol in self._protocols:
             await protocol.close()
@@ -601,7 +608,14 @@ class Connection:
 
         :param data: The data to be sent.
         """
-        await self.sendto(data, 1)
+        try:
+            await self.sendto(data, 1)
+        except (asyncio.CancelledError):
+            print('Ice send cancelled')
+            return
+        except ConnectionError as e:
+            print(c(f'Ice connection error: {e}', 'red'))
+            return
 
     async def sendto(self, data: bytes, component: int) -> None:
         """
@@ -614,6 +628,7 @@ class Connection:
         """
         active_pair = self._nominated.get(component)
         if active_pair:
+            # print(f'ice transport sending {len(data)}B to {active_pair.remote_addr}')
             await active_pair.protocol.send_data(data, active_pair.remote_addr)
         else:
             raise ConnectionError("Cannot send data, not connected")
@@ -995,7 +1010,7 @@ class Connection:
                         request,
                         pair.remote_addr,
                         integrity_key=self.remote_password.encode("utf8"),
-                        retransmissions=0,
+                        retransmissions=3,
                     )
                     failures = 0
                 except stun.TransactionError:
