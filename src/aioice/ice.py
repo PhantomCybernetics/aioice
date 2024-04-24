@@ -530,6 +530,7 @@ class Connection:
         """
         Close the connection.
         """
+        print(c('Closing ICE Connection', 'red'))
         # stop consent freshness tests
         if self._query_consent_task and not self._query_consent_task.done():
             self._query_consent_task.cancel()
@@ -545,7 +546,7 @@ class Connection:
 
         # unreference mDNS
         await unref_mdns_protocol(self)
-        print(c('Clearing ice nominated', 'red'))
+        
         self._nominated.clear()
         for protocol in self._protocols:
             await protocol.close()
@@ -609,12 +610,10 @@ class Connection:
         :param data: The data to be sent.
         """
         try:
+            # print(f'Ice Connection sending {str(len(data))}')
             await self.sendto(data, 1)
         except (asyncio.CancelledError):
             print('Ice send cancelled')
-            return
-        except ConnectionError as e:
-            print(c(f'Ice connection error: {e}', 'red'))
             return
 
     async def sendto(self, data: bytes, component: int) -> None:
